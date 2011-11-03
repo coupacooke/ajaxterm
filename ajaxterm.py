@@ -389,7 +389,7 @@ class Multiplex:
 			orig=getattr(self,name)
 			setattr(self,name,SynchronizedMethod(self.lock,orig))
 		self.thread.start()
-	def create(self,w=80,h=25,hostname=None,port=None):
+	def create(self,w=80,h=25,hostname=None,port=None,param=None):
 		pid,fd=pty.fork()
 		if pid==0:
 			try:
@@ -402,7 +402,10 @@ class Multiplex:
 				except OSError:
 					pass
 			if self.cmd:
-				cmd=['/bin/sh','-c',self.cmd]
+				if param:
+					cmd=['/bin/sh','-c',self.cmd+" "+param]
+				else:
+					cmd=['/bin/sh','-c',self.cmd]
 			elif os.getuid()==0:
 				cmd=['/bin/login']
 			else:
@@ -532,7 +535,11 @@ class AjaxTerm:
 					port = SanitizeInput(req.REQUEST['port'])
 				else:
 					port = None
-				term=self.session[s]=self.multi.create(w,h,hostname,port)
+				if 'param' in req.REQUEST:
+					param = SanitizeInput(req.REQUEST['param'])
+				else:
+					param = None
+				term=self.session[s]=self.multi.create(w,h,hostname,port,param)
 			if k:
 				self.multi.proc_write(term,k)
 			time.sleep(0.002)
@@ -557,6 +564,7 @@ class AjaxTerm:
 				vars = {}
 				vars['hostname'] = SanitizeInput(req.REQUEST['hostname'])
 				vars['port'] = SanitizeInput(req.REQUEST['port'])
+				vars['param'] = SanitizeInput(req.REQUEST['param'])
 				for key in vars:
 					index = index.replace('$' + key, vars[key])
 				req.write(index)
